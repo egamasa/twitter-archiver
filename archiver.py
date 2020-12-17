@@ -153,7 +153,3 @@ def main(event={}, context={}):
         with open(name, 'w') as outfile:
             json.dump(data, outfile)
             print('[Twitter] Saved to file: %s' % name)
-
-
-# For debug on local
-main()
