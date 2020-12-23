@@ -1,5 +1,6 @@
 # coding: utf-8
 
+import os
 import json
 import config
 import datetime
@@ -7,6 +8,7 @@ import boto3
 import time
 from datetime import timedelta, timezone
 from requests_oauthlib import OAuth1Session
+from logger import logger
 
 
 CK = config.CONSUMER_KEY
@@ -14,7 +16,7 @@ CS = config.CONSUMER_SECRET
 AT = config.ACCESS_TOKEN
 ATS = config.ACCESS_TOKEN_SECRET
 
-MAX_REQUEST_TIMES = 5
+MAX_REQUEST_TIMES = 10
 MAX_RETRY_TIMES = 3
 RETRY_WAIT_TIME = 30
 
@@ -32,7 +34,7 @@ def datetime_parse(dt: str) -> datetime:
     return parsed_dt
 
 
-def filter_term() -> (datetime, datetime):
+def filter_term():
     JST = timezone(timedelta(hours=+9), 'JST')
     dt_now = datetime.datetime.now(JST)
     d_start = (dt_now - datetime.timedelta(days=1)).date()
@@ -73,14 +75,14 @@ def api(url: str, params: dict = {}) -> dict:
         if res.status_code == 200:
             return json.loads(res.text)
         elif retry > MAX_RETRY_TIMES:
-            raise Exception('[Twitter] Twitter API: Reached max retry times')
+            raise Exception('[TwitterArchiver] Twitter API: Reached max retry times')
         elif res.status_code == 503:
             retry = retry + 1
             time.sleep(RETRY_WAIT_TIME)
         elif res.status_code == 429:
-            raise Exception('[Twitter] Twitter API: Too Many Requests (429)')
+            raise Exception('[TwitterArchiver] Twitter API: Too Many Requests (429)')
         else:
-            raise Exception('[Twitter] Twitter API: Error')
+            raise Exception('[TwitterArchiver] Twitter API: Error')
 
 
 def get_request(endpoint: str, dt_start: datetime, dt_end: datetime) -> list:
@@ -130,10 +132,10 @@ def save_to_s3(data: dict, name: str):
     obj = s3.Object(config.BUCKET_NAME, name)
     res = obj.put(Body=json.dumps(data))
     if res['ResponseMetadata']['HTTPStatusCode'] == 200:
-        print('[Twitter] Saved to S3: /%s/%s' % (config.BUCKET_NAME, name))
+        logger.info(f"[TwitterArchiver] Saved to S3: {config.BUCKET_NAME}/{name}")
         return
     else:
-        raise Exception('[Twitter] Save to S3: Error')
+        raise Exception('[TwitterArchiver] Save to S3: Error')
 
 
 def main(event={}, context={}):
@@ -148,11 +150,11 @@ def main(event={}, context={}):
     }
 
     if config.SAVE_TO_S3:
-        save_to_s3(data, path + name)
+        save_to_s3(data, os.path.join(path, name))
     else:
         with open(name, 'w') as outfile:
             json.dump(data, outfile)
-            print('[Twitter] Saved to file: %s' % name)
+            logger.info(f"[TwitterArchiver] Saved to file: {name}")
 
 
 # For debug on local

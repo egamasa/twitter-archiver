@@ -1,10 +1,3 @@
-import os
-
-# Settings
-SAVE_PATH = "twitter_json/{yyyy}/{mm}/"
-SAVE_NAME = "{yyyy}{mm}{dd}.json"
-SAVE_TO_S3 = True
-
 # Twitter API Keys
 CONSUMER_KEY = ""
 CONSUMER_SECRET = ""
@@ -17,3 +10,8 @@ SECRET_ACCESS_KEY = ""
 # REGION_NAME = ""
 ENDPOINT_URL = ""
 BUCKET_NAME = ""
+
+# Output Settings
+SAVE_PATH = "twitter-archive/{yyyy}/{mm}/"
+SAVE_NAME = "{yyyy}{mm}{dd}.json"
+SAVE_TO_S3 = True
