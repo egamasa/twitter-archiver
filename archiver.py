@@ -8,6 +8,7 @@ import boto3
 import time
 from datetime import timedelta, timezone
 from requests_oauthlib import OAuth1Session
+from google.cloud import pubsub_v1
 from logger import logger
 
 
@@ -138,6 +139,18 @@ def save_to_s3(data: dict, name: str):
         raise Exception('[TwitterArchiver] Save to S3: Error')
 
 
+def publish_to_imager(path, name: str):
+    pub = pubsub_v1.PublisherClient()
+    topic = pub.topic_path(config.PROJECT_ID, config.TOPIC_ID)
+    data = {
+        "path": path,
+        "name": name,
+    }
+    res = pub.publish(topic, json.dumps(data).encode("utf-8"))
+    logger.debug(res.result())
+    return
+
+
 def main(event={}, context={}):
     dt_start, dt_end = filter_term()
     path, name = save_path(dt_start)
@@ -151,11 +164,9 @@ def main(event={}, context={}):
 
     if config.SAVE_TO_S3:
         save_to_s3(data, os.path.join(path, name))
+        if config.PUB_TO_IMAGER:
+            publish_to_imager(path, name)
     else:
         with open(name, 'w') as outfile:
             json.dump(data, outfile)
             logger.info(f"[TwitterArchiver] Saved to file: {name}")
-
-
-# For debug on local
-main()
